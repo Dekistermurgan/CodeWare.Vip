@@ -314,49 +314,49 @@ function createESP(player)
 end
 
 -- Função para atualizar o ESP
-function updateESP()
-    for _, player in pairs(game.Players:GetPlayers()) do
-        pcall(function()
-            if espEnabled then
-                createESP(player)
-            else
-                -- Remove o ESP quando desligado
-                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp:FindFirstChild("ESPName") then
-                        hrp:FindFirstChild("ESPName"):Destroy()
+    function updateESP()
+        for _, player in pairs(game.Players:GetPlayers()) do
+            pcall(function()
+                if espEnabled then
+                    createESP(player)
+                else
+                    -- Remove o ESP quando desligado
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp:FindFirstChild("ESPName") then
+                            hrp:FindFirstChild("ESPName"):Destroy()
+                        end
                     end
                 end
+            end)
+        end
+    end
+
+    -- Atualiza constantemente
+    RunService.RenderStepped:Connect(updateESP)
+
+    -- Detecta novos jogadores
+    game.Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function()
+            wait(1)
+            if espEnabled then
+                createESP(player)
             end
         end)
-    end
-end
-
--- Atualiza constantemente
-RunService.RenderStepped:Connect(updateESP)
-
--- Detecta novos jogadores
-game.Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        wait(1)
-        if espEnabled then
-            createESP(player)
-        end
     end)
-end)
 
--- Toggle para ativar/desativar o ESP
-Section3:AddToggle({
-    enabled = true,  -- Inicialmente desligado
-    text = "ESP Name",
-    tooltip = "Turn On ESP Name",
-    confirm = true,
-    risky = false,
-    callback = function(value)
-        espEnabled = value  -- Atualiza o estado do toggle
-        print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
-    end
-})
+    -- Toggle para ativar/desativar o ESP
+    Section3:AddToggle({
+        enabled = true,  -- Inicialmente desligado
+        text = "ESP Name",
+        tooltip = "Turn On ESP Name",
+        confirm = true,
+        risky = false,
+        callback = function(value)
+            espEnabled = value  -- Atualiza o estado do toggle
+            print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
+        end
+    })
 
 Section3:AddToggle({
     enabled = true,
