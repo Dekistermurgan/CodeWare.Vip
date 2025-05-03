@@ -348,7 +348,7 @@ end)
 
 -- Toggle para ativar/desativar o ESP
 Section3:AddToggle({
-    enabled = false,  -- Inicialmente desligado
+    enabled = true,  -- Inicialmente desligado
     text = "ESP Name",
     tooltip = "Turn On ESP Name",
     confirm = true,
