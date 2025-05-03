@@ -270,7 +270,7 @@ Section3:AddToggle({
     confirm = true,
     risky = false,
     callback = function(state)
-        espEnabled = state
+        espEnabled = false
         print("ESP:", state and "Ativado" or "Desativado")
     end
 })
