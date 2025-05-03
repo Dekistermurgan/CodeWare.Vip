@@ -354,8 +354,8 @@ Section3:AddToggle({
     confirm = true,
     risky = false,
     callback = function(value)
-        espEnabled = value  -- Atualiza o estado do toggle
-        print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
+    espEnabled = ativado  -- Atualiza o estado do toggle
+    print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
     end
 })
 ]]
