@@ -270,13 +270,12 @@ Section3:AddToggle({
     confirm = true,
     risky = false,
     callback = function(state)
-        espEnabled = false
+        espEnabled = state
         print("ESP:", state and "Ativado" or "Desativado")
     end
 })
 
 
-local espScript = [[
 local RunService = game:GetService("RunService")
 local espEnabled = false  -- Inicialmente desativado
 
@@ -307,7 +306,7 @@ function createESP(player)
     textLabel.TextColor3 = Color3.new(1, 1, 1)
     textLabel.TextStrokeTransparency = 0.3
     textLabel.TextScaled = false
-    textLabel.TextSize = 14
+    textLabel.TextSize = 11
     textLabel.Font = Enum.Font.Code
     textLabel.TextWrapped = true
 
@@ -354,15 +353,10 @@ Section3:AddToggle({
     confirm = true,
     risky = false,
     callback = function(value)
-    espEnabled = true  -- Atualiza o estado do toggle
-    print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
+        espEnabled = value  -- Atualiza o estado do toggle
+        print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
     end
 })
-]]
-
--- Execute o código carregado via loadstring
-loadstring(espScript)()
-
 
 Section3:AddToggle({
     enabled = true,
