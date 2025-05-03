@@ -1,0 +1,443 @@
+local Decimals = 4
+local Clock = os.clock()
+local ValueText = "Value Is Now :"
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/drillygzzly/Roblox-UI-Libs/main/1%20Tokyo%20Lib%20(FIXED)/Tokyo%20Lib%20Source.lua"))({
+    cheatname = "CodeWare.Vip", -- watermark text
+    gamename = "Project Delta", -- watermark text
+})
+
+library:init()
+
+local Window1  = library.NewWindow({
+    title = "CodeWare.Vip | Project Delta", -- Mainwindow Text
+    size = UDim2.new(0, 510, 0.6, 6
+)})
+
+local Tab1 = Window1:AddTab("  Main  ")
+local SettingsTab = library:CreateSettingsTab(Window1)
+local Tab2 = Window1:AddTab("  Visuals  ")
+local Tab3 = Window1:AddTab("  Misc  ")
+local Tab4 = Window1:AddTab("  Others  ")
+
+--Tab1:SetText("Text")
+
+local Section1 = Tab1:AddSection("Aim", 1)
+--Section1:SetText("Text")
+local Section2 = Tab1:AddSection("Gun Mods", 2)
+local Section3 = Tab2:AddSection("WallHack", 1)
+local Section4 = Tab3:AddSection("Exploit", 1)
+
+
+
+
+
+
+Section1:AddToggle({
+    text = "Aimbot",
+    state = false,
+    risky = true,
+    tooltip = "Aim Lock",
+    flag = "Aim Lock Bind",
+    risky = true,
+    callback = function(v)
+        print(ValueText, v)
+    end
+}):AddBind({
+    enabled = true,
+    text = "Keybind1",
+    tooltip = "Aim Lock Keybind",
+    mode = "toggle",
+    bind = "None",
+    flag = "ToggleKey_1",
+    state = false,
+    nomouse = false,
+    risky = false,
+    noindicator = false,
+    callback = function(v)
+        print(ValueText, v)
+    end,
+    keycallback = function(v)
+        print(ValueText, v)
+    end
+})
+
+Section1:AddBox({
+    enabled = false,
+    name = "a",
+    flag = "TextBox_1",
+    input = "PlaceHolder1",
+    focused = false,
+    risky = false,
+    callback = function(v)
+        print(ValueText, v)
+    end
+})
+
+--[[Section1:AddToggle({
+    text = "Toggle1",
+    flag = "Toggle_1",
+    callback = function(v)
+        print(ValueText, v)
+    end
+}):AddColor({
+    text = "Color1",
+    color = Color3.fromRGB(255, 255, 255),
+    flag = "Color_1",
+    callback = function(v)
+        print(ValueText, v)
+    end
+})--]]
+
+--[[Section1:AddBind({
+    enabled = true,
+    text = "Keybind1",
+    tooltip = "tooltip1",
+    mode = "toggle",
+    bind = "None",
+    flag = "ToggleKey_1",
+    state = false,
+    nomouse = false,
+    risky = false,
+    noindicator = false,
+    callback = function(v)
+        print(ValueText, v)
+    end,
+    keycallback = function(v)
+        print(ValueText, v)
+    end
+})--]]
+
+Section1:AddSeparator({
+    enabled = true,
+    text = "Aim configs"
+})
+
+Section1:AddButton({
+    enabled = false,
+    text = "Button1",
+    tooltip = "tooltip1",
+    confirm = true,
+    risky = false,
+    callback = function()
+        print("Pressed!")
+    end
+})
+
+Section1:AddToggle({
+    enabled = true,
+    text = "Show FOV",
+    tooltip = "Show Aimbot/Silent FOV",
+    confirm = true,
+    risky = false,
+    callback = function()
+        print("Pressed!")
+    end
+})
+
+Section2:AddToggle({
+    enabled = true,
+    text = "No Recoil",
+    tooltip = "removes the recoil from the weapon",
+    confirm = true,
+    risky = false,
+    callback = function()
+        print("Pressed!")
+    end
+})
+
+--// Serviços
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+--// Função “among us :)” (tilt)
+local function doAmongUs(value)
+    ReplicatedStorage.Remotes.UpdateTilt:FireServer(value and 0/0 or 0)
+end
+
+--// Toggle para ativar/desativar o Anti-Aim
+Section4:AddToggle({
+    enabled = true,
+    text = "Anti-Aim [Among Us]",
+    tooltip = "Among Us anti-aim",
+    confirm = true,
+    risky = false,
+    callback = function(state)
+        doAmongUs(state)
+        print("Anti-Aim Among Us " .. (state and "ativado" or "desativado"))
+    end
+})
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local espEnabled = false
+local espTable = {}
+
+-- Cria a caixa de ESP
+function CreateESPBox()
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Color = Color3.new(1, 1, 1)
+    box.Filled = false
+    box.Visible = false
+    return box
+end
+
+-- Inicializa ESP para jogadores já existentes
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        espTable[player] = CreateESPBox()
+    end
+end
+
+-- Atualiza lista quando jogador entra
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        espTable[player] = CreateESPBox()
+    end
+end)
+
+-- Remove o ESP quando jogador sai
+Players.PlayerRemoving:Connect(function(player)
+    if espTable[player] then
+        espTable[player]:Remove()
+        espTable[player] = nil
+    end
+end)
+
+-- Renderiza ESP se estiver ativado
+RunService.RenderStepped:Connect(function()
+    if not espEnabled then
+        for _, box in pairs(espTable) do
+            box.Visible = false
+        end
+        return
+    end
+
+    for player, box in pairs(espTable) do
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
+            local minY, maxY = math.huge, -math.huge
+            local minX, maxX = math.huge, -math.huge
+
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    local corners = {
+                        Vector3.new(part.Size.X/2, part.Size.Y/2, part.Size.Z/2),
+                        Vector3.new(-part.Size.X/2, part.Size.Y/2, part.Size.Z/2),
+                        Vector3.new(part.Size.X/2, -part.Size.Y/2, part.Size.Z/2),
+                        Vector3.new(part.Size.X/2, part.Size.Y/2, -part.Size.Z/2),
+                        Vector3.new(-part.Size.X/2, -part.Size.Y/2, part.Size.Z/2),
+                        Vector3.new(part.Size.X/2, -part.Size.Y/2, -part.Size.Z/2),
+                        Vector3.new(-part.Size.X/2, part.Size.Y/2, -part.Size.Z/2),
+                        Vector3.new(-part.Size.X/2, -part.Size.Y/2, -part.Size.Z/2),
+                    }
+
+                    for _, corner in pairs(corners) do
+                        local worldPoint = part.CFrame:PointToWorldSpace(corner)
+                        local screenPoint, onScreen = Camera:WorldToViewportPoint(worldPoint)
+                        if onScreen then
+                            minX = math.min(minX, screenPoint.X)
+                            maxX = math.max(maxX, screenPoint.X)
+                            minY = math.min(minY, screenPoint.Y)
+                            maxY = math.max(maxY, screenPoint.Y)
+                        end
+                    end
+                end
+            end
+
+            if maxX - minX > 0 and maxY - minY > 0 then
+                box.Size = Vector2.new(maxX - minX, maxY - minY)
+                box.Position = Vector2.new(minX, minY)
+                box.Visible = true
+            else
+                box.Visible = false
+            end
+        else
+            box.Visible = false
+        end
+    end
+end)
+
+-- Toggle da UI
+Section3:AddToggle({
+    enabled = true,
+    text = "ESP Box",
+    tooltip = "Turn On ESP box",
+    confirm = true,
+    risky = false,
+    callback = function(state)
+        espEnabled = state
+        print("ESP:", state and "Ativado" or "Desativado")
+    end
+})
+
+
+local RunService = game:GetService("RunService")
+local espEnabled = false  -- Inicialmente desativado
+
+-- Função para criar o ESP
+function createESP(player)
+    if player == game.Players.LocalPlayer then return end
+
+    local character = player.Character
+    if not character then return end
+
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Verifica se já tem o ESP
+    if hrp:FindFirstChild("ESPName") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPName"
+    billboard.Adornee = hrp
+    billboard.Size = UDim2.new(0, 120, 0, 24)
+    billboard.StudsOffset = Vector3.new(0, -4.5, 0)
+    billboard.AlwaysOnTop = true
+
+    local textLabel = Instance.new("TextLabel", billboard)
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = player.Name
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.TextStrokeTransparency = 0.3
+    textLabel.TextScaled = false
+    textLabel.TextSize = 11
+    textLabel.Font = Enum.Font.Code
+    textLabel.TextWrapped = true
+
+    billboard.Parent = hrp
+end
+
+-- Função para atualizar o ESP
+function updateESP()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        pcall(function()
+            if espEnabled then
+                createESP(player)
+            else
+                -- Remove o ESP quando desligado
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp:FindFirstChild("ESPName") then
+                        hrp:FindFirstChild("ESPName"):Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Atualiza constantemente
+RunService.RenderStepped:Connect(updateESP)
+
+-- Detecta novos jogadores
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        wait(1)
+        if espEnabled then
+            createESP(player)
+        end
+    end)
+end)
+
+-- Toggle para ativar/desativar o ESP
+Section3:AddToggle({
+    enabled = true,  -- Inicialmente desligado
+    text = "ESP Name",
+    tooltip = "Turn On ESP Name",
+    confirm = true,
+    risky = false,
+    callback = function(value)
+        espEnabled = value  -- Atualiza o estado do toggle
+        print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
+    end
+})
+
+Section3:AddToggle({
+    enabled = true,
+    text = "ESP Skeleton",
+    tooltip = "Turn ON ESP skeleton",
+    confirm = true,
+    risky = false,
+    callback = function()
+        print("Pressed!")
+    end
+})
+
+Section3:AddToggle({
+    enabled = true,
+    text = "ESP Skeleton",
+    tooltip = "Turn ON ESP skeleton",
+    confirm = true,
+    risky = false,
+    callback = function()
+        print("Pressed!")
+    end
+})  
+
+-- Button1:SetText("Text")
+
+Section1:AddSlider({
+    enabled = true,
+    text = "FOV",
+    tooltip = "Fov Configs",
+    flag = "Slider_1",
+    suffix = "",
+    dragging = true,
+    focused = false,
+    min = 0,
+    max = 100,
+    increment = 0.1,
+    risky = false,
+    callback = function(v)
+        print(ValueText, v)
+    end
+})
+
+--Slider_1:SetValue(100)
+
+Section1:AddList({
+    enabled = false,
+    text = "Selection", 
+    tooltip = "tooltip1",
+    selected = "",
+    multi = false,
+    open = false,
+    max = 4,
+    values = {"1", "2", "3"},
+    risky = false,
+    callback = function(v)
+        print(ValueText, v)
+    end
+})
+
+Section1:AddColor({
+    enabled = true,
+    text = "Color1",
+    tooltip = "tooltip1",
+    color = Color3.fromRGB(255, 255, 255),
+    flag = "Color_1",
+    trans = 0,
+    open = false,
+    risky = false,
+    callback = function(v)
+        print(ValueText, v)
+    end
+})
+
+local Time = (string.format("%."..tostring(Decimals).."f", os.clock() - Clock))
+library:SendNotification(("Loaded In "..tostring(Time)), 6)
+
+--[[
+    --Window1:SetOpen(false)
+    makefolder("Title Here")
+    library:SetTheme(Default)
+    library:GetConfig(Default)
+    library:LoadConfig(Default)
+    library:SaveConfig(Default)
+]]
