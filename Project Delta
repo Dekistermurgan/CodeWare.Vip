@@ -3,18 +3,19 @@ local Clock = os.clock()
 local ValueText = "Value Is Now :"
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/drillygzzly/Roblox-UI-Libs/main/1%20Tokyo%20Lib%20(FIXED)/Tokyo%20Lib%20Source.lua"))({
-    cheatname = "CodeWare.Vip", -- watermark text
+    cheatname = "Hydra.Vip", -- watermark text
     gamename = "Project Delta", -- watermark text
 })
 
 library:init()
 
 local Window1  = library.NewWindow({
-    title = "CodeWare.Vip | Project Delta", -- Mainwindow Text
+    title = "Hydra.Vip | Project Delta", -- Mainwindow Text
     size = UDim2.new(0, 510, 0.6, 6
 )})
 
 local Tab1 = Window1:AddTab("  Main  ")
+local Tab5 = Window1:AddTab("  Rage  ")
 local SettingsTab = library:CreateSettingsTab(Window1)
 local Tab2 = Window1:AddTab("  Visuals  ")
 local Tab3 = Window1:AddTab("  Misc  ")
@@ -26,41 +27,186 @@ local Section1 = Tab1:AddSection("Aim", 1)
 --Section1:SetText("Text")
 local Section2 = Tab1:AddSection("Gun Mods", 2)
 local Section3 = Tab2:AddSection("WallHack", 1)
-local Section4 = Tab3:AddSection("Exploit", 1)
+local Section5 = Tab5:AddSection("Exploit", 1)
+local Section6 = Tab3:AddSection("Player Exploit", 1)
 
 
+-- CONFIG
+local FOV_RADIUS = 100
+local SMOOTHNESS = 0.5
+local LOCK_KEY = Enum.UserInputType.MouseButton2
 
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
+local localPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
+-- STATES
+local aimbotEnabled = false
+local rightMouseDown = false
 
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AimbotFOV"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+-- FOV CIRCLE
+local fovCircle = Instance.new("Frame")
+fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.BackgroundTransparency = 1
+fovCircle.BorderSizePixel = 0
+fovCircle.Visible = false
+fovCircle.Parent = screenGui
+
+local stroke = Instance.new("UIStroke", fovCircle)
+stroke.Color = Color3.new(1, 1, 1)
+stroke.Thickness = 2
+
+local corner = Instance.new("UICorner", fovCircle)
+corner.CornerRadius = UDim.new(1, 0)
+
+-- VISIBILITY LABEL
+local visibilityLabel = Instance.new("TextLabel")
+visibilityLabel.Size = UDim2.new(0, 300, 0, 30)
+visibilityLabel.Position = UDim2.new(0.6, 0, 0.85, 0) -- Mais para a direita
+visibilityLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+visibilityLabel.BackgroundTransparency = 1
+visibilityLabel.Text = ""
+visibilityLabel.TextColor3 = Color3.new(1, 1, 1)
+visibilityLabel.TextStrokeTransparency = 0
+visibilityLabel.Font = Enum.Font.Arcade -- Fonte pixelada
+visibilityLabel.TextScaled = true
+visibilityLabel.Visible = false
+visibilityLabel.Parent = screenGui
+
+-- GET CLOSEST TARGET
+local function getClosestTarget()
+	local closest = nil
+	local minDist = FOV_RADIUS
+	local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Head") then
+			local headPos = player.Character.Head.Position
+			local screenPos, onScreen = camera:WorldToViewportPoint(headPos)
+
+			if onScreen then
+				local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+				if dist < minDist then
+					minDist = dist
+					closest = player
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+-- MAIN LOOP
+RunService.RenderStepped:Connect(function()
+	local centerX = screenGui.AbsoluteSize.X / 2
+	local centerY = screenGui.AbsoluteSize.Y / 2
+
+	fovCircle.Position = UDim2.new(0, centerX, 0, centerY)
+	fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+
+	local target = getClosestTarget()
+
+	if aimbotEnabled and rightMouseDown and target and target.Character and target.Character:FindFirstChild("Head") then
+		local head = target.Character.Head.Position
+		local targetCF = CFrame.new(camera.CFrame.Position, head)
+		camera.CFrame = camera.CFrame:Lerp(targetCF, SMOOTHNESS)
+	end
+
+	if aimbotEnabled and target and target.Character and target.Character:FindFirstChild("Head") then
+		local head = target.Character.Head
+		local origin = camera.CFrame.Position
+		local direction = (head.Position - origin).Unit * 1000
+
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterDescendantsInstances = {localPlayer.Character}
+		raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+		raycastParams.IgnoreWater = true
+
+		local result = workspace:Raycast(origin, direction, raycastParams)
+
+		local isVisible = result and result.Instance and head:IsDescendantOf(result.Instance.Parent)
+
+		visibilityLabel.Visible = true
+		visibilityLabel.Text = "(" .. target.Name .. "): " .. (isVisible and "Visible" or "Not Visible")
+		visibilityLabel.TextColor3 = isVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+	else
+		visibilityLabel.Visible = false
+	end
+end)
+
+-- INPUT
+UIS.InputBegan:Connect(function(input)
+	if input.UserInputType == LOCK_KEY then
+		rightMouseDown = true
+	end
+end)
+
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == LOCK_KEY then
+		rightMouseDown = false
+	end
+end)
+
+-- UI LIB CONTROLS (INTEGRAÇÃO)
 Section1:AddToggle({
-    text = "Aimbot",
-    state = false,
-    risky = true,
-    tooltip = "Aim Lock",
-    flag = "Aim Lock Bind",
-    risky = true,
-    callback = function(v)
-        print(ValueText, v)
-    end
-}):AddBind({
-    enabled = true,
-    text = "Keybind1",
-    tooltip = "Aim Lock Keybind",
-    mode = "toggle",
-    bind = "None",
-    flag = "ToggleKey_1",
-    state = false,
-    nomouse = false,
-    risky = false,
-    noindicator = false,
-    callback = function(v)
-        print(ValueText, v)
-    end,
-    keycallback = function(v)
-        print(ValueText, v)
-    end
+	text = "Aimbot",
+	state = false,
+	risky = true,
+	tooltip = "Aim Lock",
+	flag = "Aim Lock Toggle",
+	callback = function(state)
+		aimbotEnabled = state
+		fovCircle.Visible = state
+	end
 })
+
+Section1:AddSlider({
+	enabled = true,
+	text = "Smoothness",
+	tooltip = "Controls how smoothly the camera locks onto targets",
+	flag = "SmoothSlider",
+	suffix = "",
+	dragging = true,
+	focused = false,
+	min = 0.1,
+	max = 1,
+	increment = 0.05,
+	risky = false,
+	callback = function(v)
+		SMOOTHNESS = v
+	end
+})
+
+Section1:AddSlider({
+	enabled = true,
+	text = "FOV Radius",
+	tooltip = "Adjusts the radius of the aim assist circle",
+	flag = "FOVSlider",
+	suffix = "",
+	dragging = true,
+	focused = false,
+	min = 10,
+	max = 300,
+	increment = 5,
+	risky = false,
+	callback = function(v)
+		FOV_RADIUS = v
+	end
+})
+
 
 Section1:AddBox({
     enabled = false,
@@ -108,26 +254,10 @@ Section1:AddBox({
     end
 })--]]
 
-Section1:AddSeparator({
-    enabled = true,
-    text = "Aim configs"
-})
-
 Section1:AddButton({
     enabled = false,
     text = "Button1",
     tooltip = "tooltip1",
-    confirm = true,
-    risky = false,
-    callback = function()
-        print("Pressed!")
-    end
-})
-
-Section1:AddToggle({
-    enabled = true,
-    text = "Show FOV",
-    tooltip = "Show Aimbot/Silent FOV",
     confirm = true,
     risky = false,
     callback = function()
@@ -155,15 +285,15 @@ local function doAmongUs(value)
 end
 
 --// Toggle para ativar/desativar o Anti-Aim
-Section4:AddToggle({
+Section5:AddToggle({
     enabled = true,
     text = "Anti-Aim [Among Us]",
     tooltip = "Among Us anti-aim",
     confirm = true,
-    risky = false,
+    risky = true,
     callback = function(state)
         doAmongUs(state)
-        print("Anti-Aim Among Us " .. (state and "ativado" or "desativado"))
+        print("Anti-Aim Among Us " .. (state and "activated" or "desactivated"))
     end
 })
 
@@ -275,93 +405,320 @@ Section3:AddToggle({
     end
 })
 
-
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local espEnabled = false  -- Inicialmente desativado
 
--- Função para criar o ESP
-function createESP(player)
-    if player == game.Players.LocalPlayer then return end
+local espEnabled = false -- Começa desativado
 
-    local character = player.Character
-    if not character then return end
+-- Função para adicionar o ESP de nome
+local function addESP(player)
+    if player == Players.LocalPlayer then return end
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
 
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hrp = player.Character.HumanoidRootPart
+    if hrp:FindFirstChild("NameTag") then return end
 
-    -- Verifica se já tem o ESP
-    if hrp:FindFirstChild("ESPName") then return end
+    -- Criar o BillboardGui (tag)
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "NameTag"
+    tag.Adornee = hrp
+    tag.Size = UDim2.new(0, 100, 0, 20)
+    tag.StudsOffset = Vector3.new(0, -3, 0) -- Coloca a tag abaixo do pé
+    tag.AlwaysOnTop = true
+    tag.LightInfluence = 0
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESPName"
-    billboard.Adornee = hrp
-    billboard.Size = UDim2.new(0, 120, 0, 24)
-    billboard.StudsOffset = Vector3.new(0, -4.5, 0)
-    billboard.AlwaysOnTop = true
+    -- Criar o TextLabel (nome do jogador)
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = player.Name
+    text.Font = Enum.Font.Code -- Fonte pixelada
+    text.TextColor3 = Color3.new(1, 1, 1)
+    text.TextStrokeTransparency = 0.5
+    text.TextScaled = false
+    text.TextSize = 11 -- Tamanho da fonte
+    text.Parent = tag
 
-    local textLabel = Instance.new("TextLabel", billboard)
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = player.Name
-    textLabel.TextColor3 = Color3.new(1, 1, 1)
-    textLabel.TextStrokeTransparency = 0.3
-    textLabel.TextScaled = false
-    textLabel.TextSize = 11
-    textLabel.Font = Enum.Font.Code
-    textLabel.TextWrapped = true
-
-    billboard.Parent = hrp
+    -- Adicionar a tag ao HumanoidRootPart
+    tag.Parent = hrp
 end
 
--- Função para atualizar o ESP
-function updateESP()
-    for _, player in pairs(game.Players:GetPlayers()) do
-        pcall(function()
-            if espEnabled then
-                createESP(player)
-            else
-                -- Remove o ESP quando desligado
-                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp:FindFirstChild("ESPName") then
-                        hrp:FindFirstChild("ESPName"):Destroy()
-                    end
-                end
-            end
-        end)
+-- Função para remover o ESP de nome
+local function removeESP(player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local tag = player.Character.HumanoidRootPart:FindFirstChild("NameTag")
+        if tag then
+            tag:Destroy()
+        end
     end
 end
 
--- Atualiza constantemente
-RunService.RenderStepped:Connect(updateESP)
+-- Atualização contínua para verificar todos os jogadores
+RunService.RenderStepped:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then
+            if espEnabled then
+                addESP(player) -- Adiciona o ESP se ativado
+            else
+                removeESP(player) -- Remove o ESP se desativado
+            end
+        end
+    end
+end)
 
--- Detecta novos jogadores
-game.Players.PlayerAdded:Connect(function(player)
+-- Quando um novo jogador entra ou renasce, adicionar o ESP caso o toggle esteja ativo
+Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
-        wait(1)
         if espEnabled then
-            createESP(player)
+            wait(1) -- Aguarda o personagem carregar
+            addESP(player)
         end
     end)
 end)
 
--- Toggle para ativar/desativar o ESP
+-- Integração com o toggle que você forneceu
 Section3:AddToggle({
-    enabled = true,  -- Inicialmente desligado
-    text = "ESP Name",
-    tooltip = "Turn On ESP Name",
-    confirm = true,
-    risky = false,
-    callback = function(value)
-        espEnabled = value  -- Atualiza o estado do toggle
-        print("ESP Name " .. (espEnabled and "Ativado" or "Desativado"))
+    enabled = true,  -- Estado inicial do toggle (começa com espEnabled)
+    text = "ESP Name",     -- Texto do toggle
+    tooltip = "Turn On ESP Name", -- Tooltip de ajuda
+    confirm = true,         -- Confirmar ao pressionar
+    risky = false,          -- Indica que o toggle não é arriscado
+    callback = function(state)
+        espEnabled = state -- Atualiza o estado de espEnabled com o estado do toggle
+        if espEnabled then
+            print("ESP Name Ativado!") -- Mensagem no console quando ativado
+        else
+            print("ESP Name Desativado!") -- Mensagem no console quando desativado
+        end
     end
 })
 
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- Variável de controle do toggle (começa DESLIGADO)
+local skeletonEnabled = false
+
+-- Tabela de linhas dos esqueletos
+local skeletons = {}
+
+-- Adiciona o toggle (coloque onde configura a UI)
 Section3:AddToggle({
     enabled = true,
     text = "ESP Skeleton",
     tooltip = "Turn ON ESP skeleton",
+    confirm = true,
+    risky = false,
+    callback = function(state)
+        skeletonEnabled = state
+        print("ESP Skeleton Toggled:", state)
+
+        if not state then
+            -- Remove todas as linhas quando desligado
+            for player, lines in pairs(skeletons) do
+                for _, line in ipairs(lines) do
+                    line:Remove()
+                end
+                skeletons[player] = nil
+            end
+        end
+    end
+})
+
+-- Cria linha branca
+local function CreateLine()
+    local line = Drawing.new("Line")
+    line.Color = Color3.fromRGB(255, 255, 255)
+    line.Thickness = 2
+    line.Transparency = 1
+    return line
+end
+
+-- Ossos R15
+local bonesR15 = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"},
+}
+
+-- Ossos R6
+local bonesR6 = {
+    {"Head", "Torso"},
+    {"Torso", "Left Arm"},
+    {"Left Arm", "Left Leg"},
+    {"Torso", "Right Arm"},
+    {"Right Arm", "Right Leg"},
+}
+
+-- Detecta se personagem é R15
+local function isR15(character)
+    return character:FindFirstChild("UpperTorso") ~= nil
+end
+
+-- Atualiza/desenha esqueleto
+local function updateSkeleton(player)
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    local bones = isR15(character) and bonesR15 or bonesR6
+
+    if not skeletons[player] then
+        skeletons[player] = {}
+        for _ = 1, #bones do
+            table.insert(skeletons[player], CreateLine())
+        end
+    end
+
+    for i, bone in ipairs(bones) do
+        local part0 = character:FindFirstChild(bone[1])
+        local part1 = character:FindFirstChild(bone[2])
+        local line = skeletons[player][i]
+
+        if part0 and part1 then
+            local pos0, onscreen0 = Camera:WorldToViewportPoint(part0.Position)
+            local pos1, onscreen1 = Camera:WorldToViewportPoint(part1.Position)
+
+            if onscreen0 and onscreen1 then
+                line.From = Vector2.new(pos0.X, pos0.Y)
+                line.To = Vector2.new(pos1.X, pos1.Y)
+                line.Visible = true
+            else
+                line.Visible = false
+            end
+        else
+            line.Visible = false
+        end
+    end
+end
+
+-- Remove esqueleto de um jogador
+local function removeSkeleton(player)
+    if skeletons[player] then
+        for _, line in ipairs(skeletons[player]) do
+            line:Remove()
+        end
+        skeletons[player] = nil
+    end
+end
+
+-- Atualização por frame
+RunService.RenderStepped:Connect(function()
+    if not skeletonEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            pcall(function()
+                updateSkeleton(player)
+            end)
+        end
+    end
+end)
+
+-- Remove linhas ao sair
+Players.PlayerRemoving:Connect(removeSkeleton)
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local espEnabled = false -- controlado pelo Toggle
+local espFolder = Instance.new("Folder", game.CoreGui)
+espFolder.Name = "DistanceESP"
+
+local FONT = Enum.Font.Code
+
+local function studsToMeters(studs)
+	return math.floor((studs * 0.28) + 0.5)
+end
+
+local function createESP(player)
+	if player == LocalPlayer then return end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = player.Name .. "_DistanceESP"
+	billboard.Adornee = nil
+	billboard.Size = UDim2.new(0, 100, 0, 10)
+	billboard.StudsOffset = Vector3.new(0, -4.8, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Parent = espFolder
+
+	local textLabel = Instance.new("TextLabel", billboard)
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = Color3.new(1, 1, 1)
+	textLabel.TextStrokeTransparency = 0.5
+	textLabel.Font = FONT
+	textLabel.TextScaled = false
+	textLabel.TextSize = 10
+	textLabel.Text = "??? meters"
+	textLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+	return billboard, textLabel
+end
+
+-- Atualização do ESP (apenas quando ativado)
+RunService.RenderStepped:Connect(function()
+	if not espEnabled then
+		espFolder:ClearAllChildren()
+		return
+	end
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local root = player.Character.HumanoidRootPart
+			local espGui = espFolder:FindFirstChild(player.Name .. "_DistanceESP")
+
+			local distance = studsToMeters((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
+
+			if not espGui then
+				local newESP, text = createESP(player)
+				newESP.Adornee = root
+				text.Text = tostring(distance) .. " meters"
+			else
+				local textLabel = espGui:FindFirstChildOfClass("TextLabel")
+				espGui.Adornee = root
+				textLabel.Text = tostring(distance) .. " meters"
+			end
+		end
+	end
+end)
+
+-- 🔘 Toggle de controle
+Section3:AddToggle({
+	enabled = true,
+	text = "ESP Distance",
+	tooltip = "Turn ON ESP Distance",
+	confirm = true,
+	risky = false,
+	callback = function(state)
+		espEnabled = state
+		if not state then
+			espFolder:ClearAllChildren()
+		end
+		print("ESP Distance is now", state and "ON" or "OFF")
+	end
+})
+
+
+Section1:AddToggle({
+    enabled = true,
+    text = "Visible check",
+    tooltip = "checks if the player is visible",
     confirm = true,
     risky = false,
     callback = function()
@@ -369,37 +726,204 @@ Section3:AddToggle({
     end
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local connections = {}
+local espEnabled = false
+
+-- Função para adicionar chams
+local function adicionarChams(character)
+	if character:FindFirstChild("HighlightESP") then return end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "HighlightESP"
+	highlight.Adornee = character
+	highlight.FillColor = Color3.fromRGB(170, 0, 255)
+	highlight.OutlineColor = Color3.fromRGB(170, 0, 255)
+	highlight.FillTransparency = 0.3
+	highlight.OutlineTransparency = 0
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = character
+end
+
+-- Remover chams
+local function removerChams(character)
+	local chams = character:FindFirstChild("HighlightESP")
+	if chams then chams:Destroy() end
+end
+
+-- Monitorar um jogador
+local function monitorarJogador(jogador)
+	if jogador == LocalPlayer then return end
+
+	local conn = jogador.CharacterAdded:Connect(function(char)
+		repeat task.wait() until char:FindFirstChild("HumanoidRootPart")
+		if espEnabled then adicionarChams(char) end
+	end)
+	table.insert(connections, conn)
+
+	if jogador.Character and espEnabled then
+		adicionarChams(jogador.Character)
+	end
+end
+
+-- Ativar ESP
+local function ativarESP()
+	espEnabled = true
+	for _, jogador in ipairs(Players:GetPlayers()) do
+		monitorarJogador(jogador)
+	end
+	table.insert(connections, Players.PlayerAdded:Connect(monitorarJogador))
+end
+
+-- Desativar ESP
+local function desativarESP()
+	espEnabled = false
+	for _, jogador in ipairs(Players:GetPlayers()) do
+		if jogador ~= LocalPlayer and jogador.Character then
+			removerChams(jogador.Character)
+		end
+	end
+	for _, conn in ipairs(connections) do
+		conn:Disconnect()
+	end
+	table.clear(connections)
+end
+
+-- Toggle para ativar/desativar ESP
 Section3:AddToggle({
     enabled = true,
-    text = "ESP Skeleton",
-    tooltip = "Turn ON ESP skeleton",
+    text = "ESP Chams",
+    tooltip = "Turn ON ESP Chams",
     confirm = true,
     risky = false,
-    callback = function()
-        print("Pressed!")
+    callback = function(state)
+        if state then
+            ativarESP()
+        else
+            desativarESP()
+        end
     end
-})  
+})
+  
+local Players = game:GetService("Players")
+local ESPHealthEnabled = false  -- Variável para controlar o estado do toggle
+
+-- Função para criar a barra de saúde
+local function createHealthBar(otherPlayer)
+    if otherPlayer == Players.LocalPlayer then return end  -- Não cria para o jogador local
+
+    -- Espera o personagem carregar
+    local character = otherPlayer.Character or otherPlayer.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local head = character:WaitForChild("Head")
+
+    -- Criação do BillboardGui para exibir a barra de saúde
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Parent = head
+    billboardGui.Adornee = head
+    billboardGui.Size = UDim2.new(0, 3, 0, 50)  -- Barra mais fina (largura 3, altura 50)
+    billboardGui.StudsOffset = Vector3.new(-2, -2, 0)  -- Mover a barra mais para baixo (valor de Y ajustado para -2)
+    billboardGui.AlwaysOnTop = true  -- Garante que a barra fique visível o tempo todo
+
+    -- Fundo da barra de saúde
+    local background = Instance.new("Frame")
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    background.BackgroundTransparency = 0.5
+    background.Parent = billboardGui
+
+    -- Barra de saúde (que será ajustada)
+    local healthBar = Instance.new("Frame")
+    healthBar.Size = UDim2.new(1, 0, 1, 0)  -- Inicialmente, a barra tem o mesmo tamanho que o fundo
+    healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    healthBar.BackgroundTransparency = 0
+    healthBar.Parent = background
+
+    -- Função para atualizar a barra de saúde
+    local function updateHealth()
+        local health = humanoid.Health
+        local maxHealth = humanoid.MaxHealth
+        local healthPercentage = health / maxHealth
+
+        -- Atualiza o tamanho da barra com base na porcentagem de saúde
+        healthBar.Size = UDim2.new(1, 0, healthPercentage, 0)
+
+        -- Muda a cor da barra conforme a saúde do jogador
+        if healthPercentage < 0.3 then
+            healthBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Vermelho
+        elseif healthPercentage < 0.7 then
+            healthBar.BackgroundColor3 = Color3.fromRGB(255, 255, 0)  -- Amarelo
+        else
+            healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Verde
+        end
+    end
+
+    -- Conecta a atualização de saúde ao evento HealthChanged
+    humanoid.HealthChanged:Connect(updateHealth)
+
+    -- Atualiza a barra de saúde no começo
+    updateHealth()
+end
+
+-- Função para criar a barra de saúde para os jogadores já existentes
+for _, otherPlayer in pairs(Players:GetPlayers()) do
+    -- Garante que a barra de saúde seja criada para jogadores que já possuem um personagem
+    if otherPlayer.Character then
+        if ESPHealthEnabled then  -- Só cria a barra se o ESP Health estiver ativado
+            createHealthBar(otherPlayer)
+        end
+    end
+    otherPlayer.CharacterAdded:Connect(function()
+        if ESPHealthEnabled then  -- Verifica se o ESP Health está ativado
+            createHealthBar(otherPlayer)
+        end
+    end)
+end
+
+-- Cria a barra de saúde para jogadores que entram no jogo
+Players.PlayerAdded:Connect(function(otherPlayer)
+    otherPlayer.CharacterAdded:Connect(function()
+        if ESPHealthEnabled then  -- Verifica se o ESP Health está ativado
+            createHealthBar(otherPlayer)
+        end
+    end)
+end)
+
+-- Adicionando a lógica para ativar/desativar o ESP Health com o toggle
+Section3:AddToggle({
+    enabled = true,  -- O toggle começa desativado
+    text = "ESP Health",
+    tooltip = "Turn ON ESP Health",
+    confirm = true,
+    risky = false,
+    callback = function(state)
+        ESPHealthEnabled = state  -- Atualiza o estado do toggle
+
+        -- Atualiza os jogadores existentes
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer.Character then
+                if ESPHealthEnabled then
+                    createHealthBar(otherPlayer)  -- Cria a barra se o toggle for ativado
+                else
+                    -- Código para remover a barra de saúde (se necessário)
+                    -- Exemplo: Remover o BillboardGui existente, caso tenha sido criado anteriormente
+                    local character = otherPlayer.Character
+                    local head = character:FindFirstChild("Head")
+                    if head then
+                        local billboardGui = head:FindFirstChildOfClass("BillboardGui")
+                        if billboardGui then
+                            billboardGui:Destroy()
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
 
 -- Button1:SetText("Text")
-
-Section1:AddSlider({
-    enabled = true,
-    text = "FOV",
-    tooltip = "Fov Configs",
-    flag = "Slider_1",
-    suffix = "",
-    dragging = true,
-    focused = false,
-    min = 0,
-    max = 100,
-    increment = 0.1,
-    risky = false,
-    callback = function(v)
-        print(ValueText, v)
-    end
-})
-
---Slider_1:SetValue(100)
 
 Section1:AddList({
     enabled = false,
@@ -410,20 +934,6 @@ Section1:AddList({
     open = false,
     max = 4,
     values = {"1", "2", "3"},
-    risky = false,
-    callback = function(v)
-        print(ValueText, v)
-    end
-})
-
-Section1:AddColor({
-    enabled = true,
-    text = "Color1",
-    tooltip = "tooltip1",
-    color = Color3.fromRGB(255, 255, 255),
-    flag = "Color_1",
-    trans = 0,
-    open = false,
     risky = false,
     callback = function(v)
         print(ValueText, v)
